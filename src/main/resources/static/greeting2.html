@@ -1,0 +1,104 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Getting Started: Serving Web Content</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script>
+        var stompClient = null;
+
+        function setConnected(connected) {
+            $("#connect").prop("disabled", connected);
+            $("#disconnect").prop("disabled", !connected);
+            if (connected) {
+                $("#conversation").show();
+            } else {
+                $("#conversation").hide();
+            }
+            $("#greetings").html("");
+        }
+
+        function connect() {
+            var socket = new SockJS('/gs-guide-websocket');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, function (frame) {
+                setConnected(true);
+                console.log('Connected: ' + frame);
+                stompClient.subscribe('/chat-result', function (result) {
+                    const msg = JSON.parse(result.body).message;
+                    showGreeting(msg);
+                });
+            });
+        }
+
+        function disconnect() {
+            if (stompClient !== null) {
+                stompClient.disconnect();
+            }
+            setConnected(false);
+            console.log("Disconnected");
+        }
+
+        function showGreeting(message) {
+            $("#result").append("<div>" + message + "</div>");
+        }
+
+        // $(function () {
+        //     $("form").on('submit', function (e) {
+        //         e.preventDefault();
+        //     });
+        //     $( "#connect" ).click(function() { connect(); });
+        //     $( "#disconnect" ).click(function() { disconnect(); });
+        //     $( "#send" ).click(function() { sendName(); });
+        // });
+        //
+
+        function sendMessage(msg) {
+            data = {
+                "message": msg
+            };
+
+            $.ajax({
+                type: "POST",
+                url: "http://localhost:8080/rooms/6450b309-0195-42be-90e5-db669a9d08ee/chats",
+                contentType: "application/json; charset=utf-8",
+                data: JSON.stringify(data),
+                success: function (res) {
+                    alert(res.code);
+                },
+                error: function (xhr, textStatus, errorThrown) {
+                    alert("통신 실패.")
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            connect();
+            // $("#chat").click(function () {
+            //     sendMessage($("#message").val());
+            // });
+
+            $("#con").click(function () {
+                const roomId = $("#roomId").val();
+                stompClient.send("/chats", {}, JSON.stringify(
+                    {
+                        'message': $("#message").val(),
+                        'roomId': roomId
+                    })
+                );
+            });
+        });
+    </script>
+</head>
+<body>
+<p id="result">
+
+</p>
+내용 : <input type="text" id="message"/>
+roomId : <input type="text" id="roomId" value="test"/>
+<!--<button id="chat">입력</button>-->
+<button id="con">입력</button>
+</body>
+</html>
